@@ -7,28 +7,31 @@
 //
 
 #import "Sympathy.h"
+#import "BaseWindow.h"
 
 static Sympathy *sharedPlugin;
 
-@implementation Sympathy
+@implementation Sympathy {
+    BaseWindow *timerWindow;
+    NSTextView *textView;
+    NSTimer *timer;
+    float time;
+}
 
 #pragma mark - Initialization
 
-+ (void)pluginDidLoad:(NSBundle *)plugin
-{
++ (void)pluginDidLoad:(NSBundle *)plugin {
     NSArray *allowedLoaders = [plugin objectForInfoDictionaryKey:@"me.delisa.XcodePluginBase.AllowedLoaders"];
     if ([allowedLoaders containsObject:[[NSBundle mainBundle] bundleIdentifier]]) {
         sharedPlugin = [[self alloc] initWithBundle:plugin];
     }
 }
 
-+ (instancetype)sharedPlugin
-{
++ (instancetype)sharedPlugin {
     return sharedPlugin;
 }
 
-- (id)initWithBundle:(NSBundle *)bundle
-{
+- (id)initWithBundle:(NSBundle *)bundle {
     if (self = [super init]) {
         // reference to plugin's bundle, for resource access
         _bundle = bundle;
@@ -45,31 +48,33 @@ static Sympathy *sharedPlugin;
     return self;
 }
 
-- (void)applicationDidFinishLaunching:(NSNotification *)notification
-{
+- (void)applicationDidFinishLaunching:(NSNotification *)notification {
     [[NSNotificationCenter defaultCenter] removeObserver:self name:NSApplicationDidFinishLaunchingNotification object:nil];
     [self initializeAndLog];
 }
 
-- (void)initializeAndLog
-{
+- (void)initializeAndLog {
     NSString *name = [self.bundle objectForInfoDictionaryKey:@"CFBundleName"];
     NSString *version = [self.bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
     NSString *status = [self initialize] ? @"loaded successfully" : @"failed to load";
     NSLog(@"🔌 Plugin %@ %@ %@", name, version, status);
 }
 
+#pragma mark - Lifecycle
+
+
 #pragma mark - Implementation
 
-- (BOOL)initialize
-{
+- (BOOL)initialize {
     // Create menu items, initialize UI, etc.
     // Sample Menu Item:
-    NSMenuItem *menuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
+    NSMenuItem *menuItem = [[NSApp mainMenu] itemWithTitle:@"File"];
     if (menuItem) {
         [[menuItem submenu] addItem:[NSMenuItem separatorItem]];
-        NSMenuItem *actionMenuItem = [[NSMenuItem alloc] initWithTitle:@"Do Action" action:@selector(doMenuAction) keyEquivalent:@""];
-        //[actionMenuItem setKeyEquivalentModifierMask:NSAlphaShiftKeyMask | NSControlKeyMask];
+        NSMenuItem *actionMenuItem = [[NSMenuItem alloc] initWithTitle:@"Start Sympathy" action:@selector(doMenuAction) keyEquivalent:@"s"];
+        // Set keys to press same time
+        // [actionMenuItem setKeyEquivalentModifierMask:NSAlphaShiftKeyMask | NSControlKeyMask];
+        [actionMenuItem setKeyEquivalentModifierMask:NSControlKeyMask];
         [actionMenuItem setTarget:self];
         [[menuItem submenu] addItem:actionMenuItem];
         return YES;
@@ -79,11 +84,28 @@ static Sympathy *sharedPlugin;
 }
 
 // Sample Action, for menu item:
-- (void)doMenuAction
-{
-    NSAlert *alert = [[NSAlert alloc] init];
-    [alert setMessageText:@"Hello, World"];
-    [alert runModal];
+- (void)doMenuAction {
+    if (!timer) {
+        timer = [NSTimer scheduledTimerWithTimeInterval:0.01f target:self selector:@selector(updateTimer:) userInfo:nil repeats:YES];
+        [timer fire];
+    }
+    
+    if (!timerWindow) {
+        timerWindow = [[BaseWindow alloc] initWithFrame:NSMakeRect(0, 0, 240, 80)];
+        
+        if (!textView) {
+            textView = [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 200, 60)];
+            [timerWindow.contentView addSubview:textView];
+        }
+        
+        NSWindowController *timerWindowController = [[NSWindowController alloc] initWithWindow:timerWindow];
+        [timerWindowController showWindow:nil];
+    }
+}
+
+- (void)updateTimer:(NSTimer *)timer {
+    time = time + 0.01;
+    [textView setString:[NSString stringWithFormat:@"%.2f", time]];
 }
 
 @end
